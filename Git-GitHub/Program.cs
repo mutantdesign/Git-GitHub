@@ -97,16 +97,18 @@ namespace Git_GitHub
                 {
                     v.Login,
                     v.Name,
-                    v.Email,
-                    Organizations = v.Organizations(100, null, null, null).Nodes.Select(o => new { o.Login, o.Name }).ToList()
+                    // Requires 'user:email' or 'read:user' scopes
+                    // v.Email, 
+                    // Requires 'read:org' scope
+                    // Organizations = v.Organizations(100, null, null, null).Nodes.Select(o => new { o.Login, o.Name }).ToList()
                 })
                 .Compile();
 
             var result = await connection.Run(query);
 
-            Console.WriteLine($"You are signed in as {result.Login} ({result.Name}) with {result.Email} as your public email address");
-            Console.WriteLine(@"Organizations:");
-            Console.WriteLine(string.Join('\n', result.Organizations.Select(o => $"{o.Login} ({o.Name})")));
+            Console.WriteLine($"You are signed in as {result.Login} ({result.Name})");
+            //Console.WriteLine(@"Organizations:");
+            //Console.WriteLine(string.Join('\n', result.Organizations.Select(o => $"{o.Login} ({o.Name})")));
         }
     }
 
