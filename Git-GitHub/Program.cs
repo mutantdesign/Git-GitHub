@@ -11,7 +11,8 @@ namespace Git_GitHub
     [Command("git-github")]
     [Subcommand(
         typeof(PullsCommand),
-        typeof(IssuesCommand))]
+        typeof(IssuesCommand),
+        typeof(ViewerCommand))]
     class Program : GitHubCommandBase
     {
         public static Task Main(string[] args)
@@ -78,6 +79,24 @@ namespace Git_GitHub
 #{pr.Number} opened on {pr.CreatedAt:D} by {pr.Login}
 ");
             }
+        }
+    }
+
+    [Command(Description = "Show viewer information")]
+    class ViewerCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
+        {
+            var connection = CreateConnection();
+
+            var query = new Query()
+                .Viewer
+                .Select(v => new { v.Login, v.Name, v.Email })
+                .Compile();
+
+            var result = await connection.Run(query);
+
+            Console.WriteLine($"You are signed in as {result.Login} ({result.Name}) with {result.Email} as your public email address");
         }
     }
 
