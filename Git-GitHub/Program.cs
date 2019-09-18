@@ -8,27 +8,28 @@ using McMaster.Extensions.CommandLineUtils;
 
 namespace Git_GitHub
 {
-    class Program
+    [Command("git-github")]
+    [Subcommand(typeof(PullsCommand))]
+    class Program : GitHubCommandBase
     {
-        [Option("--host", Description = "The host URL")]
-        public string Host { get; } = "https://github.com";
-
         public static Task Main(string[] args)
             => CommandLineApplication.ExecuteAsync<Program>(args);
 
-        public async Task OnExecute()
+        protected override Task OnExecute(CommandLineApplication app)
         {
-            var productInformation = new ProductHeaderValue("Git-GitHub", "0.1");
-            var token = GetToken(Host);
-
-            var hostAddress = HostAddress.Create(Host);
-            var connection = new Connection(productInformation, hostAddress.GraphQLUri, token);
-
-            await ShowCreatedPullRequests(connection);
+            // this shows help even if the --help option isn't specified
+            app.ShowHelp();
+            return Task.CompletedTask;
         }
+    }
 
-        async Task ShowCreatedPullRequests(Connection connection)
+    [Command(Description = "Show pull requests")]
+    class PullsCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
         {
+            var connection = CreateConnection();
+
             var orderBy = new IssueOrder { Field = IssueOrderField.CreatedAt, Direction = OrderDirection.Desc };
             var openPullRequests = new[] { PullRequestState.Open };
 
@@ -50,8 +51,29 @@ namespace Git_GitHub
 ");
             }
         }
+    }
 
-        static string GetToken(string url)
+    /// <summary>
+    /// This base type provides shared functionality.
+    /// Also, declaring <see cref="HelpOptionAttribute"/> on this type means all types that inherit from it
+    /// will automatically support '--help'
+    /// </summary>
+    [HelpOption("--help")]
+    abstract class GitHubCommandBase
+    {
+        protected abstract Task OnExecute(CommandLineApplication app);
+
+        protected Connection CreateConnection()
+        {
+            var productInformation = new ProductHeaderValue("Git-GitHub", "0.1");
+            var token = GetToken(Host);
+
+            var hostAddress = HostAddress.Create(Host);
+            var connection = new Connection(productInformation, hostAddress.GraphQLUri, token);
+            return connection;
+        }
+
+        protected static string GetToken(string url)
         {
             var secrets = new SecretStore("git");
             var auth = new BasicAuthentication(secrets);
@@ -65,5 +87,8 @@ namespace Git_GitHub
 
             return creds.Password;
         }
+
+        [Option("--host", Description = "The host URL")]
+        public string Host { get; } = "https://github.com";
     }
 }
