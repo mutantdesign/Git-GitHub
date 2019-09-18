@@ -9,7 +9,9 @@ using McMaster.Extensions.CommandLineUtils;
 namespace Git_GitHub
 {
     [Command("git-github")]
-    [Subcommand(typeof(PullsCommand))]
+    [Subcommand(
+        typeof(PullsCommand),
+        typeof(IssuesCommand))]
     class Program : GitHubCommandBase
     {
         public static Task Main(string[] args)
@@ -31,12 +33,38 @@ namespace Git_GitHub
             var connection = CreateConnection();
 
             var orderBy = new IssueOrder { Field = IssueOrderField.CreatedAt, Direction = OrderDirection.Desc };
-            var openPullRequests = new[] { PullRequestState.Open };
-
             var states = new[] { PullRequestState.Open };
             var query = new Query()
                 .Viewer
                 .PullRequests(100, null, null, null, null, null, null, orderBy, states)
+                .Nodes
+                .Select(pr => new { pr.Repository.NameWithOwner, pr.Title, pr.Number, pr.Author.Login, pr.CreatedAt })
+                .Compile();
+
+            var result = await connection.Run(query);
+
+            foreach (var pr in result)
+            {
+                Console.WriteLine(
+@$"{pr.NameWithOwner} - {pr.Title}
+#{pr.Number} opened on {pr.CreatedAt:D} by {pr.Login}
+");
+            }
+        }
+    }
+
+    [Command(Description = "Show issues")]
+    class IssuesCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
+        {
+            var connection = CreateConnection();
+
+            var orderBy = new IssueOrder { Field = IssueOrderField.CreatedAt, Direction = OrderDirection.Desc };
+            var states = new[] { IssueState.Open };
+            var query = new Query()
+                .Viewer
+                .Issues(100, null, null, null, null, null, orderBy, states)
                 .Nodes
                 .Select(pr => new { pr.Repository.NameWithOwner, pr.Title, pr.Number, pr.Author.Login, pr.CreatedAt })
                 .Compile();
