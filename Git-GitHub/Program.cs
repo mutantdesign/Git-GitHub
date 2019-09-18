@@ -5,6 +5,7 @@ using Octokit.GraphQL.Model;
 using GitHub.Primitives;
 using Microsoft.Alm.Authentication;
 using McMaster.Extensions.CommandLineUtils;
+using System.Linq;
 
 namespace Git_GitHub
 {
@@ -91,12 +92,21 @@ namespace Git_GitHub
 
             var query = new Query()
                 .Viewer
-                .Select(v => new { v.Login, v.Name, v.Email })
+                .Select(v =>
+                new
+                {
+                    v.Login,
+                    v.Name,
+                    v.Email,
+                    Organizations = v.Organizations(100, null, null, null).Nodes.Select(o => new { o.Login, o.Name }).ToList()
+                })
                 .Compile();
 
             var result = await connection.Run(query);
 
             Console.WriteLine($"You are signed in as {result.Login} ({result.Name}) with {result.Email} as your public email address");
+            Console.WriteLine(@"Organizations:");
+            Console.WriteLine(string.Join('\n', result.Organizations.Select(o => $"{o.Login} ({o.Name})")));
         }
     }
 
