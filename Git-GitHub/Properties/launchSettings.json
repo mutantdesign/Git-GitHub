@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Git-GitHub": {
+      "commandName": "Project",
+      "commandLineArgs": "--host https://github.com"
+    }
+  }
+}

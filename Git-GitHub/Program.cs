@@ -2,22 +2,32 @@
 using System.Threading.Tasks;
 using Octokit.GraphQL;
 using Octokit.GraphQL.Model;
+using GitHub.Primitives;
 using Microsoft.Alm.Authentication;
+using McMaster.Extensions.CommandLineUtils;
 
 namespace Git_GitHub
 {
     class Program
     {
-        static async Task Main()
+        [Option("--host", Description = "The host URL")]
+        public string Host { get; } = "https://github.com";
+
+        public static Task Main(string[] args)
+            => CommandLineApplication.ExecuteAsync<Program>(args);
+
+        public async Task OnExecute()
         {
             var productInformation = new ProductHeaderValue("Git-GitHub", "0.1");
-            var token = GetToken("https://github.com");
-            var connection = new Connection(productInformation, token);
+            var token = GetToken(Host);
+
+            var hostAddress = HostAddress.Create(Host);
+            var connection = new Connection(productInformation, hostAddress.GraphQLUri, token);
 
             await ShowCreatedPullRequests(connection);
         }
 
-        static async Task ShowCreatedPullRequests(Connection connection)
+        async Task ShowCreatedPullRequests(Connection connection)
         {
             var orderBy = new IssueOrder { Field = IssueOrderField.CreatedAt, Direction = OrderDirection.Desc };
             var openPullRequests = new[] { PullRequestState.Open };
