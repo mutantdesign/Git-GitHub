@@ -13,7 +13,8 @@ namespace Git_GitHub
     [Subcommand(
         typeof(PullsCommand),
         typeof(IssuesCommand),
-        typeof(ViewerCommand))]
+        typeof(ViewerCommand),
+        typeof(RepositoriesCommand))]
     class Program : GitHubCommandBase
     {
         public static Task Main(string[] args)
@@ -110,6 +111,43 @@ namespace Git_GitHub
             //Console.WriteLine(@"Organizations:");
             //Console.WriteLine(string.Join('\n', result.Organizations.Select(o => $"{o.Login} ({o.Name})")));
         }
+    }
+
+    [Command(Description = "List repositories")]
+    class RepositoriesCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
+        {
+            var connection = CreateConnection();
+
+            var owner = Owner;
+            if(owner is null)
+            {
+                var loginQuery = new Query()
+                    .Viewer
+                    .Select(v => v.Login)
+                    .Compile();
+
+                owner = await connection.Run(loginQuery);
+            }
+
+            var query = new Query()
+                .RepositoryOwner(owner)
+                .Repositories(first: 100)
+                .Nodes
+                .Select(r => new { r.Name, r.IsPrivate, ForkedFrom = r.Parent != null ? r.Parent.NameWithOwner : null })
+                .Compile();
+
+            var result = await connection.Run(query);
+
+            foreach (var r in result)
+            {
+                Console.WriteLine($"{r.Name}{(r.IsPrivate ? " [Private]" : "")}{(r.ForkedFrom != null ? " Forked from " + r.ForkedFrom : "")}");
+            }
+        }
+
+        [Option("--owner", Description = "The owning user or organization")]
+        public string Owner { get; }
     }
 
     /// <summary>
