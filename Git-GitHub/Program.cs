@@ -15,7 +15,8 @@ namespace Git_GitHub
         typeof(IssuesCommand),
         typeof(ViewerCommand),
         typeof(RepositoriesCommand),
-        typeof(BranchCommand))]
+        typeof(BranchCommand),
+        typeof(UpstreamCommand))]
     class Program : GitHubCommandBase
     {
         public static Task Main(string[] args)
@@ -213,7 +214,7 @@ namespace Git_GitHub
                 {
                     Console.WriteLine(@"
 Associated pull requests:");
-                    foreach(var pr in prs)
+                    foreach (var pr in prs)
                     {
                         Console.WriteLine(
         @$"{pr.Repository} - {pr.Title} [{pr.State}]
@@ -233,6 +234,66 @@ Associated pull requests:");
             }
 
             return null;
+        }
+    }
+
+    [Command(Description = "Show information about the upstream repository")]
+    class UpstreamCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
+        {
+            var gitDirectory = LibGit2Sharp.Repository.Discover(".");
+            using (var repository = new LibGit2Sharp.Repository(gitDirectory))
+            {
+                var remote = repository.Network.Remotes.FirstOrDefault();
+                if (remote is null)
+                {
+                    Console.WriteLine("This repository contains no remotes");
+                    return;
+                }
+
+                var remoteUrl = new UriString(remote.Url);
+
+                var openPullRequestState = new[] { PullRequestState.Open };
+                var openIssueState = new[] { IssueState.Open };
+                var query = new Query()
+                    .Repository(owner: remoteUrl.Owner, name: remoteUrl.RepositoryName)
+                    .Select(r => new
+                    {
+                        Repository = r.Select(p => new
+                        {
+                            p.NameWithOwner,
+                            p.ViewerPermission,
+                            DefaultBranchName = p.DefaultBranchRef.Name,
+                            OpenPullRequests = p.PullRequests(null, null, null, null, null, null, null, null, openPullRequestState).TotalCount,
+                            OpenIssues = p.Issues(null, null, null, null, null, null, null, openIssueState).TotalCount
+                        }).Single(),
+                        Parent = r.Parent == null ? null : r.Parent.Select(p => new
+                        {
+                            p.NameWithOwner,
+                            p.ViewerPermission,
+                            DefaultBranchName = p.DefaultBranchRef.Name,
+                            OpenPullRequests = p.PullRequests(null, null, null, null, null, null, null, null, openPullRequestState).TotalCount,
+                            OpenIssues = p.Issues(null, null, null, null, null, null, null, openIssueState).TotalCount
+                        }).Single()
+                    }).Compile();
+
+                var connection = CreateConnection(remoteUrl);
+                var result = await connection.Run(query);
+
+                if (result.Parent != null)
+                {
+                    Console.WriteLine($"Upstream repository {result.Parent.NameWithOwner} has {result.Parent.OpenPullRequests} open pull requests and {result.Parent.OpenIssues} open issues");
+                    Console.WriteLine($"The default branch is {result.Parent.DefaultBranchName}");
+                    Console.WriteLine($"Viewer has permission to {result.Parent.ViewerPermission}");
+                }
+                else
+                {
+                    Console.WriteLine($"Upstream repository {result.Repository.NameWithOwner} has {result.Repository.OpenPullRequests} open pull requests and {result.Repository.OpenIssues} open issues");
+                    Console.WriteLine($"The default branch is {result.Repository.DefaultBranchName}");
+                    Console.WriteLine($"Viewer has permission to {result.Repository.ViewerPermission}");
+                }
+            }
         }
     }
 
