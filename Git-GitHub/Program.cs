@@ -193,13 +193,6 @@ namespace Git_GitHub
                             HeadRepository = pr.HeadRepository.NameWithOwner,
                             pr.BaseRefName,
                             BaseRepository = pr.BaseRef != null ? pr.BaseRef.Repository.NameWithOwner : null,
-                            CommitCount = pr.Commits(null, null, null, null).TotalCount,
-                            Commits = pr.Commits(null, null, 100, null).Nodes.Select(c => new
-                            {
-                                c.Commit.Oid,
-                                c.Commit.AbbreviatedOid,
-                                c.Commit.MessageHeadline
-                            }).ToList(),
                             pr.HeadRefOid
                         }).ToList()
                     }).Compile();
@@ -222,10 +215,6 @@ Associated pull requests:");
                         Console.WriteLine(
         @$"{pr.HeadRepository} - {pr.Title}
 #{pr.Number} opened on {pr.CreatedAt:D} by {pr.Author}");
-                        foreach(var commit in pr.Commits)
-                        {
-                            Console.WriteLine($"{commit.AbbreviatedOid} {commit.MessageHeadline}");
-                        }
                     }
                     Console.WriteLine();
                 }
