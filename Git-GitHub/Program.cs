@@ -14,7 +14,8 @@ namespace Git_GitHub
         typeof(PullsCommand),
         typeof(IssuesCommand),
         typeof(ViewerCommand),
-        typeof(RepositoriesCommand))]
+        typeof(RepositoriesCommand),
+        typeof(BranchCommand))]
     class Program : GitHubCommandBase
     {
         public static Task Main(string[] args)
@@ -121,7 +122,7 @@ namespace Git_GitHub
             var connection = CreateConnection();
 
             var owner = Owner;
-            if(owner is null)
+            if (owner is null)
             {
                 var loginQuery = new Query()
                     .Viewer
@@ -150,6 +151,46 @@ namespace Git_GitHub
         public string Owner { get; }
     }
 
+    [Command(Description = "Show information about the current branch")]
+    class BranchCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
+        {
+            var gitDirectory = LibGit2Sharp.Repository.Discover(".");
+            using (var repository = new LibGit2Sharp.Repository(gitDirectory))
+            {
+                var head = repository.Head;
+                var trackedBranch = head.TrackedBranch;
+                if (trackedBranch is null)
+                {
+                    Console.WriteLine($"Current branch '{head.FriendlyName}' isn't tracking a remote.");
+                    return;
+                }
+
+                var upstreamBranch = trackedBranch.UpstreamBranchCanonicalName;
+                var remoteUrl = new UriString(repository.Network.Remotes[trackedBranch.RemoteName].Url);
+
+                var query = new Query()
+                    .Repository(owner: remoteUrl.Owner, name: remoteUrl.RepositoryName)
+                    .Ref(upstreamBranch)
+                    .Select(r => new
+                    {
+                        Repository = r.Repository.NameWithOwner,
+                        ForkedFrom = r.Repository.Parent != null ? r.Repository.Parent.NameWithOwner : null,
+                        r.Target.Oid,
+                    }).Compile();
+
+                var connection = CreateConnection(remoteUrl);
+                var result = await connection.Run(query);
+
+                Console.WriteLine(result.ForkedFrom is null ? result.Repository : $"{result.Repository} forked from {result.ForkedFrom}");
+                Console.WriteLine(result.Oid == trackedBranch.Tip.Sha ? "There are no new commits" : "There are new commits!");
+
+                await Task.Yield();
+            }
+        }
+    }
+
     /// <summary>
     /// This base type provides shared functionality.
     /// Also, declaring <see cref="HelpOptionAttribute"/> on this type means all types that inherit from it
@@ -160,12 +201,14 @@ namespace Git_GitHub
     {
         protected abstract Task OnExecute(CommandLineApplication app);
 
-        protected Connection CreateConnection()
+        protected Connection CreateConnection(string host = null)
         {
-            var productInformation = new ProductHeaderValue("Git-GitHub", "0.1");
-            var token = GetToken(Host);
+            host = Host ?? host ?? "https://github.com";
 
-            var hostAddress = HostAddress.Create(Host);
+            var productInformation = new ProductHeaderValue("Git-GitHub", "0.1");
+            var token = GetToken(host);
+
+            var hostAddress = HostAddress.Create(host);
             var connection = new Connection(productInformation, hostAddress.GraphQLUri, token);
             return connection;
         }
@@ -186,6 +229,6 @@ namespace Git_GitHub
         }
 
         [Option("--host", Description = "The host URL")]
-        public string Host { get; } = "https://github.com";
+        public string Host { get; }
     }
 }
