@@ -42,7 +42,7 @@ namespace Git_GitHub
                 .Viewer
                 .PullRequests(100, null, null, null, null, null, null, orderBy, states)
                 .Nodes
-                .Select(pr => new { pr.Repository.NameWithOwner, pr.Title, pr.Number, pr.Author.Login, pr.CreatedAt })
+                .Select(pr => new { HeadRepository = pr.HeadRepository.NameWithOwner, pr.Title, pr.Number, Author = pr.Author != null ? pr.Author.Login : null, pr.CreatedAt })
                 .Compile();
 
             var result = await connection.Run(query);
@@ -50,8 +50,8 @@ namespace Git_GitHub
             foreach (var pr in result)
             {
                 Console.WriteLine(
-@$"{pr.NameWithOwner} - {pr.Title}
-#{pr.Number} opened on {pr.CreatedAt:D} by {pr.Login}
+@$"{pr.HeadRepository} - {pr.Title}
+#{pr.Number} opened on {pr.CreatedAt:D} by {pr.Author}
 ");
             }
         }
@@ -167,27 +167,87 @@ namespace Git_GitHub
                     return;
                 }
 
-                var upstreamBranch = trackedBranch.UpstreamBranchCanonicalName;
+                var upstreamBranchCanonicalName = trackedBranch.UpstreamBranchCanonicalName;
+                var branchName = ToBranchName(upstreamBranchCanonicalName);
                 var remoteUrl = new UriString(repository.Network.Remotes[trackedBranch.RemoteName].Url);
 
+                var pullRequestStates = new[] { PullRequestState.Open, PullRequestState.Closed, PullRequestState.Merged };
                 var query = new Query()
                     .Repository(owner: remoteUrl.Owner, name: remoteUrl.RepositoryName)
-                    .Ref(upstreamBranch)
+                    .Ref(upstreamBranchCanonicalName)
                     .Select(r => new
                     {
                         Repository = r.Repository.NameWithOwner,
                         ForkedFrom = r.Repository.Parent != null ? r.Repository.Parent.NameWithOwner : null,
                         r.Target.Oid,
+                        PullRequests = r.AssociatedPullRequests(100, null, null, null, null, branchName, null, null, pullRequestStates).Nodes.Select(pr => new
+                        {
+                            pr.Number,
+                            pr.Title,
+                            pr.Url,
+                            Author = pr.Author != null ? pr.Author.Login : null,
+                            pr.CreatedAt,
+                            pr.AuthorAssociation,
+                            pr.State,
+                            pr.HeadRefName,
+                            HeadRepository = pr.HeadRepository.NameWithOwner,
+                            pr.BaseRefName,
+                            BaseRepository = pr.BaseRef != null ? pr.BaseRef.Repository.NameWithOwner : null,
+                            CommitCount = pr.Commits(null, null, null, null).TotalCount,
+                            Commits = pr.Commits(null, null, 100, null).Nodes.Select(c => new
+                            {
+                                c.Commit.Oid,
+                                c.Commit.AbbreviatedOid,
+                                c.Commit.MessageHeadline
+                            }).ToList(),
+                            pr.HeadRefOid
+                        }).ToList()
                     }).Compile();
 
                 var connection = CreateConnection(remoteUrl);
                 var result = await connection.Run(query);
 
                 Console.WriteLine(result.ForkedFrom is null ? result.Repository : $"{result.Repository} forked from {result.ForkedFrom}");
-                Console.WriteLine(result.Oid == trackedBranch.Tip.Sha ? "There are no new commits" : "There are new commits!");
+                Console.WriteLine(result.Oid == trackedBranch.Tip.Sha ? "No new commits" : "There are new commits!");
+                if(result.PullRequests.Count == 0)
+                {
+                    Console.WriteLine("No associated pull requests");
+                }
+                else
+                {
+                    Console.WriteLine(@"
+Associated pull requests:");
+                    foreach(var pr in result.PullRequests)
+                    {
+                        Console.WriteLine(
+        @$"{pr.HeadRepository} - {pr.Title}
+#{pr.Number} opened on {pr.CreatedAt:D} by {pr.Author}");
+                        foreach(var commit in pr.Commits)
+                        {
+                            Console.WriteLine($"{commit.AbbreviatedOid} {commit.MessageHeadline}");
+                        }
+                    }
+                    Console.WriteLine();
+                }
 
                 await Task.Yield();
             }
+        }
+
+        private object ToBranchName(object upstreamBranchCanonicalName)
+        {
+            throw new NotImplementedException();
+        }
+
+        static string ToBranchName(string canonicalName)
+        {
+            var prefix = "refs/heads/";
+            if (canonicalName.StartsWith(prefix))
+            {
+                return canonicalName.Substring(prefix.Length);
+            }
+
+            return null;
         }
     }
 
