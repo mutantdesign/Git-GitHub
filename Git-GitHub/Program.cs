@@ -203,7 +203,9 @@ namespace Git_GitHub
 
                 Console.WriteLine(result.ForkedFrom is null ? result.Repository : $"{result.Repository} forked from {result.ForkedFrom}");
                 Console.WriteLine(result.Oid == trackedBranch.Tip.Sha ? "No new commits" : "There are new commits!");
-                if(result.PullRequests.Count == 0)
+                var prs = result.PullRequests
+                    .Where(pr => pr.HeadRepository == pr.Repository); // Only show incoming pull requests
+                if (prs.Count() == 0)
                 {
                     Console.WriteLine("No associated pull requests");
                 }
@@ -211,11 +213,11 @@ namespace Git_GitHub
                 {
                     Console.WriteLine(@"
 Associated pull requests:");
-                    foreach(var pr in result.PullRequests)
+                    foreach(var pr in prs)
                     {
                         Console.WriteLine(
         @$"{pr.Repository} - {pr.Title} [{pr.State}]
-#{pr.Number} opened on {pr.CreatedAt:D} by {pr.Author}");
+#{pr.Number} opened on {pr.CreatedAt:D} by {pr.Author} ({pr.AuthorAssociation})");
                     }
                     Console.WriteLine();
                 }
