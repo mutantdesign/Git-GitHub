@@ -221,14 +221,7 @@ Associated pull requests:");
                     }
                     Console.WriteLine();
                 }
-
-                await Task.Yield();
             }
-        }
-
-        private object ToBranchName(object upstreamBranchCanonicalName)
-        {
-            throw new NotImplementedException();
         }
 
         static string ToBranchName(string canonicalName)
