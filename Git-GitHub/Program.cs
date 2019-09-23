@@ -42,7 +42,7 @@ namespace Git_GitHub
                 .Viewer
                 .PullRequests(100, null, null, null, null, null, null, orderBy, states)
                 .Nodes
-                .Select(pr => new { HeadRepository = pr.HeadRepository.NameWithOwner, pr.Title, pr.Number, Author = pr.Author != null ? pr.Author.Login : null, pr.CreatedAt })
+                .Select(pr => new { Repository = pr.Repository.NameWithOwner, pr.Title, pr.Number, Author = pr.Author != null ? pr.Author.Login : null, pr.CreatedAt })
                 .Compile();
 
             var result = await connection.Run(query);
@@ -50,7 +50,7 @@ namespace Git_GitHub
             foreach (var pr in result)
             {
                 Console.WriteLine(
-@$"{pr.HeadRepository} - {pr.Title}
+@$"{pr.Repository} - {pr.Title}
 #{pr.Number} opened on {pr.CreatedAt:D} by {pr.Author}
 ");
             }
@@ -182,6 +182,7 @@ namespace Git_GitHub
                         r.Target.Oid,
                         PullRequests = r.AssociatedPullRequests(100, null, null, null, null, branchName, null, null, pullRequestStates).Nodes.Select(pr => new
                         {
+                            Repository = pr.Repository.NameWithOwner,
                             pr.Number,
                             pr.Title,
                             pr.Url,
@@ -213,7 +214,7 @@ Associated pull requests:");
                     foreach(var pr in result.PullRequests)
                     {
                         Console.WriteLine(
-        @$"{pr.HeadRepository} - {pr.Title}
+        @$"{pr.Repository} - {pr.Title} [{pr.State}]
 #{pr.Number} opened on {pr.CreatedAt:D} by {pr.Author}");
                     }
                     Console.WriteLine();
