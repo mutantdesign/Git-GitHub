@@ -12,7 +12,6 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>git-github</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
-    <Version>0.1.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
