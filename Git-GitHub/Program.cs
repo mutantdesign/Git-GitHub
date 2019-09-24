@@ -6,6 +6,8 @@ using GitHub.Primitives;
 using Microsoft.Alm.Authentication;
 using McMaster.Extensions.CommandLineUtils;
 using System.Linq;
+using System.Diagnostics;
+using System.IO;
 
 namespace Git_GitHub
 {
@@ -293,6 +295,52 @@ Associated pull requests:");
                     Console.WriteLine($"The default branch is {result.Repository.DefaultBranchName}");
                     Console.WriteLine($"Viewer has permission to {result.Repository.ViewerPermission}");
                 }
+            }
+        }
+    }
+
+    [Command(Description = "Login using GitHub Credential Manager")]
+    class LoginCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
+        {
+            var host = Host ?? "https://github.com";
+
+            CredentialManager("reject", host);
+            CredentialManager("fill", host);
+
+            await Task.Yield();
+        }
+
+        private static void CredentialManager(string command, string host)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = $"credential-manager {command}",
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+            };
+
+            startInfo.Environment["GCM_AUTHORITY"] = "GitHub";
+
+            using (var process = Process.Start(startInfo))
+            {
+                var hostUrl = new Uri(host);
+                process.StandardInput.WriteLine($"protocol={hostUrl.Scheme}");
+                process.StandardInput.WriteLine($"host={hostUrl.Authority}");
+                process.StandardInput.WriteLine($"path={hostUrl.AbsolutePath}");
+                process.StandardInput.Close();
+
+                while (true)
+                {
+                    var line = process.StandardOutput.ReadLine();
+                    if (line == null) break;
+                    Console.WriteLine(line);
+                }
+
+                process.WaitForExit();
             }
         }
     }
