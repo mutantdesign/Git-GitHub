@@ -18,7 +18,8 @@ namespace Git_GitHub
         typeof(ViewerCommand),
         typeof(RepositoriesCommand),
         typeof(BranchCommand),
-        typeof(UpstreamCommand))]
+        typeof(UpstreamCommand),
+        typeof(LoginCommand))]
     class Program : GitHubCommandBase
     {
         public static Task Main(string[] args)
@@ -101,19 +102,13 @@ namespace Git_GitHub
                 new
                 {
                     v.Login,
-                    v.Name,
-                    // Requires 'user:email' or 'read:user' scopes
-                    // v.Email, 
-                    // Requires 'read:org' scope
-                    // Organizations = v.Organizations(100, null, null, null).Nodes.Select(o => new { o.Login, o.Name }).ToList()
+                    v.Name
                 })
                 .Compile();
 
             var result = await connection.Run(query);
 
             Console.WriteLine($"You are signed in as {result.Login} ({result.Name})");
-            //Console.WriteLine(@"Organizations:");
-            //Console.WriteLine(string.Join('\n', result.Organizations.Select(o => $"{o.Login} ({o.Name})")));
         }
     }
 
