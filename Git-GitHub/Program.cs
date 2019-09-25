@@ -112,7 +112,7 @@ namespace Git_GitHub
         }
     }
 
-    [Command(Description = "Show visible organizations")]
+    [Command(Description = "Show visible organizations (requires 'read:org' scope)")]
     class OrganizationsCommand : GitHubCommandBase
     {
         protected override async Task OnExecute(CommandLineApplication app)
@@ -135,9 +135,9 @@ namespace Git_GitHub
 
             var result = await connection.Run(query);
 
-            foreach(var organization in result)
+            foreach (var o in result)
             {
-                Console.WriteLine($"{organization.Login} has {organization.Repositories} repositories, {organization.Members} members, {organization.Teams} teams and {organization.Projects} projects");
+                Console.WriteLine($"{o.Login} has {o.Repositories} repositories, {o.Members} members, {o.Teams} teams and {o.Projects}");
             }
         }
     }
