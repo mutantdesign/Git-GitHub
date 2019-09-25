@@ -45,7 +45,7 @@ namespace Git_GitHub
             var states = new[] { PullRequestState.Open };
             var query = new Query()
                 .Viewer
-                .PullRequests(100, null, null, null, null, null, null, orderBy, states)
+                .PullRequests(first: 100, orderBy: orderBy, states: states)
                 .Nodes
                 .Select(pr => new { Repository = pr.Repository.NameWithOwner, pr.Title, pr.Number, Author = pr.Author != null ? pr.Author.Login : null, pr.CreatedAt })
                 .Compile();
@@ -73,7 +73,7 @@ namespace Git_GitHub
             var states = new[] { IssueState.Open };
             var query = new Query()
                 .Viewer
-                .Issues(100, null, null, null, null, null, orderBy, states)
+                .Issues(first: 100, orderBy: orderBy, states: states)
                 .Nodes
                 .Select(pr => new { pr.Repository.NameWithOwner, pr.Title, pr.Number, pr.Author.Login, pr.CreatedAt })
                 .Compile();
