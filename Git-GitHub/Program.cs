@@ -16,6 +16,7 @@ namespace Git_GitHub
         typeof(PullsCommand),
         typeof(IssuesCommand),
         typeof(ViewerCommand),
+        typeof(OrganizationsCommand),        
         typeof(RepositoriesCommand),
         typeof(BranchCommand),
         typeof(UpstreamCommand),
@@ -109,6 +110,36 @@ namespace Git_GitHub
             var result = await connection.Run(query);
 
             Console.WriteLine($"You are signed in as {result.Login} ({result.Name})");
+        }
+    }
+
+    [Command(Description = "Show visible organizations")]
+    class OrganizationsCommand : GitHubCommandBase
+    {
+        protected override async Task OnExecute(CommandLineApplication app)
+        {
+            var connection = CreateConnection();
+
+            var query = new Query()
+                .Viewer
+                .Organizations(first: 100)
+                .Nodes
+                .Select(o => new
+                {
+                    o.Login,
+                    Repositories = o.Repositories(null, null, null, null, null, null, null, null, null, null).TotalCount,
+                    Teams = o.Teams(null, null, null, null, null, null, null, null, null, null, null).TotalCount,
+                    Members = o.MembersWithRole(null, null, null, null).TotalCount,
+                    Projects = o.Projects(null, null, null, null, null, null, null).TotalCount
+                })
+                .Compile();
+
+            var result = await connection.Run(query);
+
+            foreach(var organization in result)
+            {
+                Console.WriteLine($"{organization.Login} has {organization.Repositories} repositories, {organization.Members} members, {organization.Teams} teams and {organization.Projects} projects");
+            }
         }
     }
 
