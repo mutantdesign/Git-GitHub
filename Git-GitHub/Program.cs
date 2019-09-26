@@ -373,10 +373,10 @@ Associated pull requests:");
             return connection;
         }
 
-        protected static string GetToken(string url)
+        protected string GetToken(string url)
         {
-            var secrets = new SecretStore("git");
-            var auth = new BasicAuthentication(secrets);
+            var secretStore = CreateSecretStore();
+            var auth = new BasicAuthentication(secretStore);
             var remoteUri = new Uri(url);
             var targetUrl = remoteUri.GetLeftPart(UriPartial.Authority);
             var creds = auth.GetCredentials(new TargetUri(targetUrl));
@@ -388,7 +388,22 @@ Associated pull requests:");
             return creds.Password;
         }
 
+        SecretStore CreateSecretStore() =>  SecretStore switch
+        {
+            SecretStores.Git => new SecretStore("git", Secret.UriToIdentityUrl),
+            SecretStores.GHfVS => new SecretStore("GitHub for Visual Studio", (tu, ns) => $"{ns} - {tu.ToString(true, true, true)}"),
+            _ => throw new InvalidOperationException($"Unknown secret store {SecretStore}")
+        };
+
         [Option("--host", Description = "The host URL")]
         public string Host { get; }
+
+        [Option("--secret-store", Description = "The secret store to use (Git or GHfVS)")]
+        public SecretStores SecretStore { get; } = SecretStores.Git;
+    }
+
+    public enum SecretStores
+    {
+        Git, GHfVS
     }
 }
