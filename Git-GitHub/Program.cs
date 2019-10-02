@@ -331,7 +331,7 @@ Associated pull requests:");
         {
             var host = Host ?? "https://github.com";
 
-            CredentialManager.Run("fill", host);
+            CredentialManager.Fill(host);
 
             await Task.Yield();
         }
@@ -345,7 +345,7 @@ Associated pull requests:");
         {
             var host = Host ?? "https://github.com";
 
-            CredentialManager.Run("reject", host);
+            CredentialManager.Reject(host);
 
             await Task.Yield();
         }
