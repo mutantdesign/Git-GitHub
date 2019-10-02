@@ -52,7 +52,7 @@ namespace Git_GitHub
             var startInfo = new ProcessStartInfo
             {
                 FileName = "git",
-                Arguments = $"credential-manager {command}",
+                Arguments = $"credential {command}",
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
