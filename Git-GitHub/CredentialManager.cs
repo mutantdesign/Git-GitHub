@@ -8,30 +8,26 @@ namespace Git_GitHub
     {
         public static (string username, string password) Fill(string hostUrl)
         {
-            var uri = new Uri(hostUrl);
-            var inputProperties = new Dictionary<string, string>
-            {
-                ["protocol"] = uri.Scheme,
-                ["host"] = uri.Authority,
-                ["path"] = uri.AbsolutePath
-            };
-
+            var inputProperties = CreateInputProperties(hostUrl);
             var outputProperties = Run("fill", inputProperties);
-
             return (outputProperties["username"], outputProperties["password"]);
         }
 
         public static void Reject(string hostUrl)
         {
+            var inputProperties = CreateInputProperties(hostUrl);
+            Run("reject", inputProperties);
+        }
+
+        static Dictionary<string, string> CreateInputProperties(string hostUrl)
+        {
             var uri = new Uri(hostUrl);
-            var inputProperties = new Dictionary<string, string>
+            return new Dictionary<string, string>
             {
                 ["protocol"] = uri.Scheme,
                 ["host"] = uri.Authority,
                 ["path"] = uri.AbsolutePath
             };
-
-            var outputProperties = Run("reject", inputProperties);
         }
 
         static IDictionary<string, string> Run(string command, string host)
