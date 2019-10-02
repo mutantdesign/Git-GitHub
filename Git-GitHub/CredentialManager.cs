@@ -6,27 +6,26 @@ namespace Git_GitHub
 {
     public class CredentialManager
     {
-        public static (string username, string password) Fill(string hostUrl)
+        public static (string Username, string Password) Fill(Uri hostUrl)
         {
             var inputProperties = CreateInputProperties(hostUrl);
             var outputProperties = Run("fill", inputProperties);
             return (outputProperties["username"], outputProperties["password"]);
         }
 
-        public static void Reject(string hostUrl)
+        public static void Reject(Uri hostUrl)
         {
             var inputProperties = CreateInputProperties(hostUrl);
             Run("reject", inputProperties);
         }
 
-        static Dictionary<string, string> CreateInputProperties(string hostUrl)
+        static Dictionary<string, string> CreateInputProperties(Uri hostUrl)
         {
-            var uri = new Uri(hostUrl);
             return new Dictionary<string, string>
             {
-                ["protocol"] = uri.Scheme,
-                ["host"] = uri.Authority,
-                ["path"] = uri.AbsolutePath
+                ["protocol"] = hostUrl.Scheme,
+                ["host"] = hostUrl.Authority,
+                ["path"] = hostUrl.AbsolutePath
             };
         }
 

@@ -331,7 +331,7 @@ Associated pull requests:");
         {
             var host = Host ?? "https://github.com";
 
-            CredentialManager.Fill(host);
+            CredentialManager.Fill(new Uri(host));
 
             await Task.Yield();
         }
@@ -345,7 +345,7 @@ Associated pull requests:");
         {
             var host = Host ?? "https://github.com";
 
-            CredentialManager.Reject(host);
+            CredentialManager.Reject(new Uri(host));
 
             await Task.Yield();
         }
@@ -375,17 +375,30 @@ Associated pull requests:");
 
         protected string GetToken(string url)
         {
-            var secretStore = CreateSecretStore();
-            var auth = new BasicAuthentication(secretStore);
-            var remoteUri = new Uri(url);
-            var targetUrl = remoteUri.GetLeftPart(UriPartial.Authority);
-            var creds = auth.GetCredentials(new TargetUri(targetUrl));
-            if (creds is null)
+            var targetUrl = new Uri(url).GetLeftPart(UriPartial.Authority);
+            switch (SecretStore)
             {
-                throw new ApplicationException($"Couldn't find credentials for {targetUrl}");
+                case SecretStores.Credential:
+                    // Use the built in credential store
+                    var userPass = CredentialManager.Fill(new Uri(targetUrl));
+                    if (userPass.Username != null)
+                    {
+                        return userPass.Password;
+                    }
+                    break;
+                default:
+                    // Use a specific secret store
+                    var secretStore = CreateSecretStore();
+                    var auth = new BasicAuthentication(secretStore);
+                    var creds = auth.GetCredentials(new TargetUri(targetUrl));
+                    if (creds != null)
+                    {
+                        return creds.Password;
+                    }
+                    break;
             }
 
-            return creds.Password;
+            throw new ApplicationException($"Couldn't find credentials for {url}");
         }
 
         SecretStore CreateSecretStore() =>  SecretStore switch
@@ -399,11 +412,11 @@ Associated pull requests:");
         public string Host { get; }
 
         [Option("--secret-store", Description = "The secret store to use (Git or GHfVS)")]
-        public SecretStores SecretStore { get; } = SecretStores.Git;
+        public SecretStores SecretStore { get; } = SecretStores.Credential;
     }
 
     public enum SecretStores
     {
-        Git, GHfVS
+        Credential, Git, GHfVS
     }
 }
